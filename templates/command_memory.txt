@@ -1,0 +1,4 @@
+# Chat Memory
+
+Enabled?: **${memory_enabled}**
+Count: **${messages_length}**

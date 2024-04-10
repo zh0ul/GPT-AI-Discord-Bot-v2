@@ -1,0 +1,12 @@
+> 
+> **GPT Models:**```
+> 1 - gpt-3.5-turbo
+> 2 - gpt-4```
+//> 1 - text-davinci-003 - Most capable and updated form of GPT-3
+//> 2 - text-davinci-002 - The previous version of GPT-3
+//> 3 - text-davinci-001 - Ollllld
+//> 4 - text-curie-001   - Very capable and usually more unhinged
+//> 5 - text-babbage-001 - Capable of straight forward tasks
+//> 6 - text-ada-001     - Capable of simple tasks
+//> 7 - code-davinci-002 - Most capable coding buddy but takes 30 seconds to respond
+//> 8 - code-cushman-001 - Capable of straight forward coding```

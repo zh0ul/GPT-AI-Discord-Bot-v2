@@ -1,0 +1,8 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${id}        - An ID that does not matter.
+//   ${p}         - The command_prefix
+//   ${name}      - The name of the character.
+//   ${profileId} - The profile ID of the current chat_profile.
+//

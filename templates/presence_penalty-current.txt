@@ -1,0 +1,4 @@
+> 
+> **Presence Penalty:** ` ${presence_penalty} `  (0.0 to 2.0)
+> 
+> How much to penalize new tokens based on wether they appear in the text so far. Increases the models likelihood to talk about new topics.

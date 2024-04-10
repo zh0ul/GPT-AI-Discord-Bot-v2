@@ -1,0 +1,2 @@
+> New thread started for ${user}
+> If you invite others, make sure they activate using `/activate`

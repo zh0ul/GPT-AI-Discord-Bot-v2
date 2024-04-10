@@ -1,0 +1,16 @@
+> # Character Card Importer
+> ## Import your first card with the following command:
+> `${p}import ${url}`
+> ## Next, download more character cards and import them.
+> 1. **Download** a Character Card
+> 2. **Drag and drop** the image into this chat (or press upload file)
+> 3. **Press Enter (or send)**
+> ## You can get Character Cards from:
+> - [**Pygmalion - SFW**](<https://pygmalion.chat/characters>)
+//> - [**Character Hub - NSFW**](<https://www.chub.ai/>)
+> ## You can **create** and **edit** cards **online** using:
+> - [**ZoltanAI**](<https://zoltanai.github.io/character-editor/>)
+> ## You can **create**, **edit** and **test** cards locally using:
+> - [**Oobabooga**](<https://github.com/oobabooga/text-generation-webui>)
+> - [**Silly Tavern**](<https://github.com/SillyTavern/SillyTavern>)
+> - [**TavernAI**](<https://github.com/TavernAI/TavernAI>)

@@ -1,0 +1,14 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${prefix}    -  The users current prefix
+//   ${codeblock} -  The current codeblock setting, true or false
+//
+> 
+> Code Block Responses?  `${codeblock}`
+> 
+> - Enable this option when you are asking for code.
+> - Disable this option when you are just chatting.
+> 
+> To enable:  `${prefix}codeblock true`
+> To disable: `${prefix}codeblock false`

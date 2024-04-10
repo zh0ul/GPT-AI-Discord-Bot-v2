@@ -1,0 +1,1 @@
+> Swapped AI card to **${cardName}**

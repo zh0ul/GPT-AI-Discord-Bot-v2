@@ -1,0 +1,7 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${p}  -  The users current prefix
+//
+> Setting channel **active**. The chat bot will now respond to you here.
+> Use `${p}activate` to de-activate.

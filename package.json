@@ -1,0 +1,25 @@
+{
+  "name": "gpt-ai-discord-bot",
+  "version": "1.0.0",
+  "description": "**node.js** Specifically, the `npm` and `node` commands. - Download link: https://nodejs.org/en/download/ - Once installed, open a command prompt and make sure npm and node available: ```bat where npm where node ``` - Example: ```bat S:\\Zhoul\\VSCode-Projects\\GPT-AI-Discord-Bot>where npm C:\\Utils\\Node\\npm C:\\Utils\\Node\\npm.cmd",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bufferutil": "^4.0.8",
+    "discord.js": "^14.14.1",
+    "jimp": "^0.22.12",
+    "mongodb": "^6.4.0",
+    "openai": "^4.28.4",
+    "png-chunk-text": "^1.0.0",
+    "png-chunks-encode": "^1.0.0",
+    "png-chunks-extract": "^1.0.0",
+    "printf": "^0.6.1",
+    "sanitize-filename": "^1.6.3",
+    "utf-8-validate": "^6.0.3"
+  }
+}

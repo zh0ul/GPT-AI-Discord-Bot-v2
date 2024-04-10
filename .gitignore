@@ -1,0 +1,27 @@
+# node.js Specific
+node_modules
+#package-lock.json
+
+# Application Directories
+data
+data.bak
+images
+logs
+
+# Application Files
+.env
+config.json
+
+# Developer Specific
+characters/
+character-card-parser-test.js
+character-card-library-test.js
+copy.gitignore
+deploy-commands.js
+deploy-commands-config.json
+README-internal.md
+mongodb-test.js
+stable-diffusion-library-test.jpg
+stable-diffusion-library-test.js
+tavern-cards.js
+test-*.js

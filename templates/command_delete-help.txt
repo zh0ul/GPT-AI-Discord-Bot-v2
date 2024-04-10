@@ -1,0 +1,2 @@
+> usage: ${p}delete <number_of_messages_to_delete>
+> example: ${p}delete 5

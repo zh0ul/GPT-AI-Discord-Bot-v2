@@ -1,0 +1,19 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${p}  -  The users current prefix
+//
+> # General Commands
+> - ${p}help
+> - ${p}commands
+> - ${p}command-prefix
+> # Channel Settings
+> - ${p}activate
+> # Character Cards
+> - ${p}import <png file>
+> - ${p}list
+> - ${p}swap <character>
+> - ${p}memory { true | false | clear }
+> # Images
+> - ${p}image <prompt>
+> - ${p}image-variation <image file>

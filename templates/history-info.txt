@@ -1,0 +1,1 @@
+> History is **${h_enabled}** for profile **${profileId}** and contains **${length}** entries. *(try `!history enable` and `!history disable`)*

@@ -1,0 +1,14 @@
+> 
+> ${user}, you don't appear to have any **Character Cards** yet!
+> 
+> You can upload a .png to this chat with the  `${p}import`  command.
+> 
+> You can get **Character Cards** from many sites including:
+> - [**Pygmalion**](<https://pygmalion.chat/characters>)
+> 
+> You can **create** and **edit** them **online** using:
+> - [**ZoltanAI**](<https://zoltanai.github.io/character-editor/>)
+> 
+> You can **create**, **edit** and **test** them locally using:
+> - [**Silly Tavern**](<https://github.com/SillyTavern/SillyTavern>)
+> - [**TavernAI**](<https://github.com/TavernAI/TavernAI>)

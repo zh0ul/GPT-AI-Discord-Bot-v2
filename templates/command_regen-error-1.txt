@@ -1,0 +1,2 @@
+> Memory not enabled. No way to regenerate last response. Enable memory to use this feature.
+> To enable memory:  `${p}memory true`

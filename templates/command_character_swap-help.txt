@@ -1,0 +1,3 @@
+> usage: `${p}swap <character>`
+> example: `${p}swap Twisted`
+> Get a list of characters with `${p}list`

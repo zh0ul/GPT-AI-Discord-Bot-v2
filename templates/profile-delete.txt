@@ -1,0 +1,6 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${profileId}    -  The profileId that was deleted.
+//
+> Deleted profile: ${profileId}

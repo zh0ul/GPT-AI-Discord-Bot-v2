@@ -1,0 +1,1 @@
+To swap characters use:  ${p}swap <character name>

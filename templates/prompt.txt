@@ -1,0 +1,9 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${profileId} -  The current profileId
+//   ${prompt}    -  The current prompt for this profile
+//   ${prefix}    -  The current users command prefix
+//
+${prefix}prompt
+${prompt}

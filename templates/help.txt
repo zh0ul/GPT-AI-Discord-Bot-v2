@@ -1,0 +1,29 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${p}    -  The users current prefix
+//
+> # Tavern4Discord Help
+> 
+> ## Channel Settings
+> - **${p}activate**  --  Activate/Deactivate the bot in this channel.
+> - **${p}command-prefix <new_prefix>**  --  Where <new_prefix> is the new prefix. Your current prefix is: **${p}**
+> ## Character Cards
+> - **${p}import <png_file>**  --  Import a character card from a PNG file.
+> - **${p}list**  --  List character cards.
+> - **${p}swap <character>**  --  Swap to a character card.  Name can be partial.
+> - **${p}card**  --  Show the bots current character card.
+> - **${p}my-card**  --  Show the users current character card.
+> ## Chat Commands
+> - **${p}chat-export**  --  Export chat history for current character card (JSON format).
+> - **${p}chat-import**  --  Import chat history for current character card (JSON format).
+> - **${p}delete #**  --  Where # is the number of messages in memory to delete, starting with the most recent.
+> - **${p}memory < true | false | clear >**  --  Show/Activate/Clear Chat Memory (history) for selected character card.
+> - **${p}temperature #**  --  Get/Set the temperature for chat messages. Default: 0.5 , Range: 0.0 to 2.0.
+> - **${p}trim #**  --  Where # is the number of lines to keep in the last chat response.
+> - **${p}regenerate**  --  Regenerate the last chat response.
+> ## Images
+> - **${p}image <prompt>**  --  Generate an image based on the prompt.
+> - **${p}image-variation <image file>**  --  Generate a variation of the image from **${p}image** , or of a given image.
+> ## Slash Commands
+> - **${p}deploy-slash-commands**  --  Deploys/Updates the latest slash commands for this server.

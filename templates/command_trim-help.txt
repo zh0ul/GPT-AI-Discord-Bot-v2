@@ -1,0 +1,2 @@
+> # Trim
+> ${p}trim <NUM> --  Trims the last response to the last <NUM> of lines.  Blank lines are not counted but are included in output.

@@ -1,0 +1,2 @@
+> To create an image variation, you must supply an image.
+> Drag-drop an image into chat, then try your command again.

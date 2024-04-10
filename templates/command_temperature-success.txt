@@ -1,0 +1,1 @@
+> ### Changed temperature from ${old_temperature} to ${temperature}

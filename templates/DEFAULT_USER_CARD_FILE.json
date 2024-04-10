@@ -1,0 +1,36 @@
+{
+  "spec": "chara_card_v2",
+  "spec_version": "2.0",
+  "data": {
+    "name": "Nobody",
+    "description": "",
+    "personality": "",
+    "scenario": "",
+    "first_mes": "",
+    "mes_example": "",
+    "creator_notes": "",
+    "system_prompt": "",
+    "post_history_instructions": "",
+    "alternate_greetings": [],
+    "character_book": null,
+    "tags": [],
+    "creator": "",
+    "character_version": "",
+    "extensions": {
+      "talkativeness": "0.5",
+      "fav": false,
+      "world": "",
+      "depth_prompt": {
+        "prompt": "",
+        "depth": 4
+      },
+      "discord": {
+        "image_url": "https://cdn.discordapp.com/attachments/1223790705986637926/1223804974744469605/Nobody.png?ex=661b3033&is=6608bb33&hm=c269ed188841e9ea8914842f64b4956bf6779dced99e92faaa36ea23c0ef0983&"
+      }
+    }
+  },
+  "cardId": "a421206b-39a2-4526-b2c4-2cc330f726a9",
+  "aiId": "b1c6ad62-b69d-4d20-97a3-4e72023b0951",
+  "cardName": "Nobody",
+  "image_url": "https://cdn.discordapp.com/attachments/1223790705986637926/1223804974744469605/Nobody.png?ex=661b3033&is=6608bb33&hm=c269ed188841e9ea8914842f64b4956bf6779dced99e92faaa36ea23c0ef0983&"
+}

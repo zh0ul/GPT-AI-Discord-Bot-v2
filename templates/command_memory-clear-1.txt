@@ -1,0 +1,2 @@
+> Are you sure you want to clear the ${messages_length} messages in memory for profile: **${profileId}**
+> Confirm by typing `${p}memory clear confirm`

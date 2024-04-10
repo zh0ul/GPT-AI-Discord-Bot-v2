@@ -1,0 +1,7 @@
+> # Temperature
+> - Controls randomness of responses.
+> - A value between 0.0 and 2.0
+> - A lower temperature leads to more predictable outputs.
+> - A higher temperature leads to more creative outputs.
+> - A temperature that is too high leads to insanity/garbled text.
+> - The current temperature is: **${p}temperature ${temperature}**

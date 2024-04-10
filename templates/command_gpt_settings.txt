@@ -1,0 +1,16 @@
+> 
+> **!GPT-Settings** for profile **${profileId}**
+> 
+> `${p}model             ${model}`
+> `${p}temperature       ${temperature}`
+> `${p}top-p             ${top_p}`
+> `${p}presence-penalty  ${presence_penalty}`
+> `${p}frequency-penalty ${frequency_penalty}`
+> 
+> **Set all at once:**
+> 
+> `${p}g model:${modelId} temp:${temperature} top:${top_p} pres:${presence_penalty} freq:${frequency_penalty}`
+> 
+> **Or:**
+> 
+> `${p}g  ${modelId}  ${temperature}  ${top_p}  ${presence_penalty}  ${frequency_penalty}`

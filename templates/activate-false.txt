@@ -1,0 +1,7 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${p}  -  The users current prefix
+//
+> Setting channel **inactive**. The chat bot will no longer respond to you here.
+> Use `${p}activate` to re-activate.

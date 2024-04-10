@@ -1,0 +1,25 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${p}         -  The users command prefix
+//   ${pcount}    -  The count of profiles
+//   ${plist}     -  A list of profiles
+//   ${profileId} -  The current profileId
+> 
+> **You have ${pcount} profiles**
+> ${plist}
+> 
+> **Current Profile**
+> `${p}profile           ${profileId}`
+> 
+> **Profile Settings**
+> `${p}codeblock         ${codeblock}`
+> `${p}history           ${history_enabled}`
+> 
+> **GPT Settings**
+> `${p}prompt            ${prompt}`
+> `${p}model             ${model}`
+> `${p}temperature       ${temperature}`
+> `${p}top-p             ${top_p}`
+> `${p}presence-penalty  ${presence_penalty}`
+> `${p}frequency-penalty ${frequency_penalty}`

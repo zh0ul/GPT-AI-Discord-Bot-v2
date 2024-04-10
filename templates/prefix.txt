@@ -1,0 +1,10 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${prefix}  -  The users current prefix
+//
+> 
+> Your command prefix for this channel is  `${prefix}`
+> 
+> To change it to `!` try  `${prefix}command-prefix !`
+> To change it to `#` try  `${prefix}command-prefix #`

@@ -1,0 +1,7 @@
+///////////////////////////////////////////////////////////
+// Variable List:
+//
+//   ${prefix}    -  The users current prefix
+//
+> Command not understood.
+> For a list of commands, try: `${prefix}commands`
