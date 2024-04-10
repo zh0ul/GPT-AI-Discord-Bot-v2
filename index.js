@@ -262,6 +262,8 @@ class AIUser
     this.last_image_prompt = c.last_image_prompt || "";
     this.last_image_file = c.last_image_file || "";
     this.last_image_prompt_revised = c.last_image_prompt_revised || "";
+    this.last_cardId_bot = c.last_cardId_bot || "DEFAULT-BOT-CARD";
+    this.last_cardId_user = c.last_cardId_user || "DEFAULT-USER-CARD";
     this.channel_settings = c.channel_settings || {};
     this.chat_settings = c.chat_settings || {};
     this.chat_settings.model = c.chat_settings.model || "mixtral-8x7b-32768";
@@ -934,8 +936,14 @@ function log_message(message)
   try
   {
     logTo(`// message`);
-    logTo(message);
-    logTo(``);
+    if (DEBUG_MODE)
+    {
+      logTo(message);
+    }
+    else
+    {
+      logTo(message.content);
+    }
   }
   catch (err) { logTo(err); }
 }
@@ -1253,12 +1261,17 @@ async function discord_character_card_embed(aiuser,card,setImage,pageNumber = 1,
       .setLabel('Set as My Card')
       .setStyle(set_as_user_style);
 
-    const as_bot = new ButtonBuilder()
+      const as_bot = new ButtonBuilder()
       .setCustomId('set-as-bot_' + aiuser.aiId + '_' + card.cardId)
       .setLabel("Set as Bot's Card")
       .setStyle(set_as_bot_style);
 
-    const prev_card = new ButtonBuilder()
+      const new_chat = new ButtonBuilder()
+      .setCustomId('start-new-chat_' + aiuser.aiId + '_' + card.cardId)
+      .setLabel("Start New Chat")
+      .setStyle(ButtonStyle.Primary);
+
+      const prev_card = new ButtonBuilder()
 			.setCustomId('card-prev_' + aiuser.aiId + "_" + card.cardId)
 			.setLabel('< Card')
 			.setStyle(ButtonStyle.Secondary);
@@ -1268,7 +1281,7 @@ async function discord_character_card_embed(aiuser,card,setImage,pageNumber = 1,
 			.setLabel('Card >')
 			.setStyle(ButtonStyle.Secondary);
 
-      const row1 = new ActionRowBuilder().addComponents(as_user,   as_bot);
+      const row1 = new ActionRowBuilder().addComponents(as_user,   as_bot,    new_chat);
       const row2 = new ActionRowBuilder().addComponents(prev_prop, next_prop, prev_card, next_card);
 
     return { content: "", embeds: [embed], components: [row1,row2] };
@@ -1854,11 +1867,11 @@ async function routeDiscordMessage(message)
       logTo("// [routeMessage] -> handle_Commands");
       await handle_Commands(aiuser,message,content);
     }
-    // Else, if the first 5 characters are literally "!help", route the message to handle_Commands to show the user their command prefix
-    else if (content.toLowerCase().substring(0,5) == "!help")
-    {
-      await handle_Commands(aiuser,message,aiuser.command_prefix + "help");
-    }
+    // // Else, if the first 5 characters are literally "!help", route the message to handle_Commands to show the user their command prefix
+    // else if (content.toLowerCase().substring(0,5) == "!help")
+    // {
+    //   await handle_Commands(aiuser,message,aiuser.command_prefix + "help");
+    // }
     // Else, if the channel is active, route the message to handle_ChatMessage and return
     //else if ( message.channel.type != ChannelType.GuildText || aiuser.active_channels.includes(message.channelId) )
     else if ( aiuser.active_channels.includes(message.channelId) )
@@ -2493,7 +2506,7 @@ async function command_character_list(aiuser,message,args,argslist)
   for (const card of cards)
   {
     id += 1;
-    let line = `- ${card.cardName}`
+    let line = `- ${id}. ${card.cardName}`
     if (card.cardId == chat_profile.cardId_user) line = line + " **[My Card]**"
     if (card.cardId == chat_profile.cardId_bot)  line = line + " **[Bot Card]**"
     description = description + line + `\n`;
@@ -2551,7 +2564,10 @@ async function command_character_swap(aiuser,message,args,argslist)
   if (args.length == 0) return await loadTemplate("command_character_swap-help.txt",  { p: aiuser.command_prefix, user: aiuser.discordUser.globalName});
   const cards = await getAICards(aiuser.aiId);
   //if (args.length > 0)  chat_profiles = chat_profiles.filter( chat_profile => { let r = true; for (const arg of argslist) { if (!chat_profile.profileId.toLowerCase().includes(arg.toLowerCase())) r = false; }; return r; } );
-  const card = cards.find( card => card.data.name.toLowerCase().startsWith(args.toLowerCase()) );
+  let card
+  //const card = cards.find( card => card.data.name.toLowerCase().startsWith(args.toLowerCase()) );
+  if (!isNaN(parseInt(args))) card = cards[parseInt(args)-1];
+  if (!card) card = cards.find( card => card.cardName.toLowerCase().includes(args.toLowerCase()) );
   if (!card) return await loadTemplate("command_character_swap-not-found.txt",  { name: args, p: aiuser.command_prefix, user: aiuser.discordUser.globalName});
   chat_profile.cardId_bot = card.cardId;
   await updateObjectInMongoDB( MONGO_URI, "chat_profiles", {"chatId": chat_profile.chatId}, {$set: { cardId_bot: chat_profile.cardId_bot } } );
@@ -2936,7 +2952,7 @@ async function handleCommand(aiuser,message,content)
 
   const command_list =
   [
-    { name: "activate",              altname: "",         delete_ephemeral: 5000,   func: command_activate              },
+    { name: "activate",              altname: "",         delete_ephemeral: false,  func: command_activate              },
     { name: "commands",              altname: "",         delete_ephemeral: false,  func: command_commands              },
     { name: "command-prefix",        altname: "cp",       delete_ephemeral: false,  func: command_command_prefix        },
     { name: "help",                  altname: "",         delete_ephemeral: false,  func: command_help                  },
@@ -2966,7 +2982,6 @@ async function handleCommand(aiuser,message,content)
 
   if (commandName == "activate" || commandName.substring(0,1) == "a")  { command = command_list[0], response = await command_activate (...out_args_v2); }
 
-  //else if ( message.channel.type == ChannelType.GuildText && !aiuser.active_channels.includes(message.channelId) ) { return; }
   else if ( !aiuser.active_channels.includes(message.channelId) ) { return; }
 
   else
@@ -3049,14 +3064,14 @@ async function handle_SlashCommand(interaction)
 
   const aiuser = await getAIUser(interaction.user,interaction.guildId,interaction.channelId);
   
-  if ( interaction.channel.type == ChannelType.GuildText )
-  {
+  //if ( interaction.channel.type == ChannelType.GuildText )
+  //{
     if ( interaction.commandName != "activate" && !aiuser.active_channels.includes(interaction.channelId))
     {
       await interaction.editReply({ content: 'This channel is not active for chat. Try /activate', ephemeral: true });
       return;
     }
-  }
+  //}
 
   let content = aiuser.command_prefix + interaction.commandName
 
@@ -3231,6 +3246,17 @@ async function handle_ButtonInteraction(interaction)
         const new_message  = await discord_create_memory_embed(aiuser,chat_profile,-1);
         await interaction.update(new_message);
       }
+      return;
+    }
+
+    if (args[0].match(/^start-new-chat/g))
+    {
+      const aiuser           = await getAIUser(interaction.user,interaction.guildId,interaction.channelId);
+      const cardId_bot       = args[2]
+      await updateObjectInMongoDB( MONGO_URI, "users", {"aiId": aiuser.aiId}, {$set: {"last_cardId_bot": cardId_bot}} );
+      const chat_profile     = await getAIChatProfile(aiuser,interaction.channelId,"//NEW-CHAT-PROFILE//");
+      const new_message      = await discord_create_memory_embed(aiuser,chat_profile,-1);
+      await interaction.update(new_message);
       return;
     }
 
