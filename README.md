@@ -141,7 +141,7 @@ GPT Settings (per profile)
 - In the discord developer portal, under Applications
 - Under OAuth2, is a Link Generator.
 - Below is an example link for AlexGPT
-- https://discord.com/api/oauth2/authorize?client_id=1056039374464237648&permissions=515463695424&scope=bot
+- https://discord.com/oauth2/authorize?client_id=1056039374464237648&permissions=28582672333905&scope=bot
 
 # To Do
 - Add reaction handling.
