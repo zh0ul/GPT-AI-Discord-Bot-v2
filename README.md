@@ -97,7 +97,7 @@ Directory images already exists.
 [DiscordAPI] Logged in as AlyxGPT#1587
 ```
 
-# Turning it into a binary
+# Turning it into a binary (NOT REQUIRED)
 **In windows, for windows**
 ```
 npm install -g pkg

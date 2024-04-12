@@ -13,15 +13,14 @@ function txt2img_request_template()
  * @param {Object} headers 
  * @returns 
  */
-async function txt2img(request, baseUrl = 'http://127.0.0.1:7860', headers = {'accept':'application/json', 'Content-Type':'application/json'})
+async function txt2img(request, baseUrl = 'http://127.0.0.1:7860', headers = {'accept':'application/json', 'Content-Type':'application/json', 'Authorization':'Bearer YOUR_API_KEY'})
 {
   try
   {
     if (!request) return txt2img_request_template()
     if (!baseUrl) baseUrl = 'http://127.0.0.1:7860'
-    if (!headers) headers = {'accept':'application/json', 'Content-Type':'application/json'} //  //'Authorization':'Bearer ' + process.env.STABLE_DIFFUSION_API_KEY
+    if (!headers) headers = {'accept':'application/json', 'Content-Type':'application/json', 'Authorization':'Bearer YOUR_API_KEY'} //  //'Authorization':'Bearer ' + process.env.STABLE_DIFFUSION_API_KEY
     baseUrl = baseUrl.replace(/\/$/, "")
-  
     const response = await
       fetch(baseUrl + "/sdapi/v1/txt2img", {
         method: 'POST',
