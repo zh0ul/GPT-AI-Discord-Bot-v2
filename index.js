@@ -1409,6 +1409,15 @@ async function setAIChatProfile(aiuser,channelId,chatId)
 }
 
 
+async function setAIChatProfileChannelSetting(aiuser,channelId,settingName,settingValue)
+{
+  logTo(`// [setAIChatProfileChannelSetting] for aiId: ${aiuser.aiId} and channelId: ${channelId} and settingName: ${settingName} and settingValue: ${settingValue}`)
+  const payload = {$set:{}}
+  payload.$set["channel_settings." + channelId + "." + settingName] = settingValue;
+  await updateObjectInMongoDB( MONGO_URI, "users", {"aiId": aiuser.aiId}, payload );
+}
+
+
 async function newAIChatProfile(aiuser,channelId)
 {
   logTo("// [newAIChatProfile] for aiId:" + aiuser.aiId + " and channelId:" + channelId)
@@ -1422,7 +1431,7 @@ async function newAIChatProfile(aiuser,channelId)
   result.cardId_user    = aiuser.last_cardId_user || "DEFAULT-USER-CARD";
   await saveObjectToMongoDB( MONGO_URI, "chat_profiles", {chatId: result.chatId}, result );
   aiuser.channel_settings[channelId].chatId = result.chatId;
-  await setAIChatProfile(aiuser,channelId,result.chatId);
+  await setAIChatProfileChannelSetting(aiuser,channelId,"chatId",result.chatId);
   return result;
 }
 
@@ -3242,7 +3251,8 @@ async function handle_ButtonInteraction(interaction)
       }
       if (chat_profile)
       {
-        await setAIChatProfile(aiuser,interaction.channelId,chat_profile.chatId);
+        //await setAIChatProfile(aiuser,interaction.channelId,chat_profile.chatId);
+        await setAIChatProfileChannelSetting(aiuser,interaction.channelId,"chatId",chat_profile.chatId);
         const new_message  = await discord_create_memory_embed(aiuser,chat_profile,-1);
         await interaction.update(new_message);
       }

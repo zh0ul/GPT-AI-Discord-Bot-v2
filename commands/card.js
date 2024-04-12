@@ -15,7 +15,7 @@ async function execute(interaction)
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('card')
-		.setDescription('Shows the current character card set for the bot.'),
+		.setDescription('View/Manage your character cards or start a new chat.'),
     // .addStringOption(
     //   option =>
     //     option.setName('input')
