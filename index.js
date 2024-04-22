@@ -262,8 +262,8 @@ class AIUser
     this.last_image_prompt = c.last_image_prompt || "";
     this.last_image_file = c.last_image_file || "";
     this.last_image_prompt_revised = c.last_image_prompt_revised || "";
-    this.last_cardId_bot = c.last_cardId_bot || "DEFAULT-BOT-CARD";
-    this.last_cardId_user = c.last_cardId_user || "DEFAULT-USER-CARD";
+    this.cardId_bot = c.cardId_bot || "DEFAULT-BOT-CARD";
+    this.cardId_user = c.cardId_user || "DEFAULT-USER-CARD";
     this.channel_settings = c.channel_settings || {};
     this.chat_settings = c.chat_settings || {};
     this.chat_settings.model = c.chat_settings.model || "mixtral-8x7b-32768";
@@ -320,6 +320,7 @@ class AIChatProfile
     this.memory_enabled = c.memory_enabled || false;
     this.memory_depth   = c.hasOwnProperty("memory_depth") ? c.memory_depth : DEFAULT_MEMORY_DEPTH;
     this.user           = c.user           || "";
+    this.char           = c.char           || "";
     this.persona        = c.persona        || "";
     this.prompt         = c.prompt         || "";
     this.cardId_bot     = c.cardId_bot     || "DEFAULT-BOT-CARD";
@@ -1420,15 +1421,19 @@ async function setAIChatProfileChannelSetting(aiuser,channelId,settingName,setti
 
 async function newAIChatProfile(aiuser,channelId)
 {
-  logTo("// [newAIChatProfile] for aiId:" + aiuser.aiId + " and channelId:" + channelId)
+  logTo("// [newAIChatProfile] for aiId:" + aiuser.aiId + " and channelId:" + channelId);
   const result          = new AIChatProfile();
   result.aiId           = aiuser.aiId;
-  result.chatName       = get_date("-")
+  result.chatName       = get_date("-");
   result.channelId      = channelId;
   result.user           = aiuser.discordUser.globalName;
   result.memory_enabled = true;
-  result.cardId_bot     = aiuser.last_cardId_bot  || "DEFAULT-BOT-CARD";
-  result.cardId_user    = aiuser.last_cardId_user || "DEFAULT-USER-CARD";
+  result.cardId_bot     = aiuser.cardId_bot  || "DEFAULT-BOT-CARD";
+  result.cardId_user    = aiuser.cardId_user || "DEFAULT-USER-CARD";
+  const card_bot        = await getAICardById(result.cardId_bot);
+  const card_user       = await getAICardById(result.cardId_user);
+  result.char           = card_bot.data.name || "assistant";
+  result.user           = card_user.data.name || aiuser.discordUser.globalName;
   await saveObjectToMongoDB( MONGO_URI, "chat_profiles", {chatId: result.chatId}, result );
   aiuser.channel_settings[channelId].chatId = result.chatId;
   await setAIChatProfileChannelSetting(aiuser,channelId,"chatId",result.chatId);
@@ -1454,12 +1459,41 @@ async function getAIChatProfile(aiuser,channelId,chatId,createIfNotExist = true)
 }
 
 
+async function getAIChatProfileByChatId(chatId)
+{
+  console.log("// [getAIChatProfileByChatId] for chatId: " + chatId)
+  let chat_profile = await mongoFindOne( MONGO_URI, "chat_profiles", {chatId: chatId} );
+  if (chat_profile) chat_profile = new AIChatProfile(chat_profile);
+  return chat_profile;
+}
+
+
 async function getAIChatProfiles(aiId,channelId)
 {
   console.log("// [getAIChatProfiles] for aiId: " + aiId + " and channelId: " + channelId)
   const filter     = {"aiId": aiId, "channelId": channelId}
   const sort       = {chatName: 1}
   return await mongoFind( MONGO_URI, "chat_profiles", filter, null, sort );
+}
+
+
+async function setAIChatProfileCardBot(aiuser,chatId,cardId,name,updateUsers = true, updateChatProfile = true)
+{
+  const payload = {$set:{}}
+  payload.$set["cardId_bot"] = cardId;
+  if (updateUsers)          await updateObjectInMongoDB( MONGO_URI, "users",         {"aiId": aiuser.aiId}, payload );
+  if (name) payload.$set["char"] = name;
+  if (updateChatProfile)    await updateObjectInMongoDB( MONGO_URI, "chat_profiles", {"chatId": chatId},    payload );
+}
+
+
+async function setAIChatProfileCardUser(aiuser,chatId,cardId,name,updateUsers = true, updateChatProfile = true)
+{
+  const payload = {$set:{}}
+  payload.$set["cardId_user"]    = cardId;
+  if (updateUsers)       await updateObjectInMongoDB( MONGO_URI, "users",         {"aiId": aiuser.aiId}, payload );
+  if (name) payload.$set["user"] = name;
+  if (updateChatProfile) await updateObjectInMongoDB( MONGO_URI, "chat_profiles", {"chatId": chatId},    payload );
 }
 
 
@@ -1600,7 +1634,7 @@ async function getAIMessages(aiuser,chat_profile,content,role = "user",name)
  * @param   {AIUser} aiuser - The path to the input PNG file.
  * @returns {object} messages in OpenAI API format.
  */
-async function buildAIChatMessages(aiuser,chat_profile,content,role = "user",name)
+async function buildAIChatMessages(aiuser,chat_profile,content,role = "user",user_name,bot_name)
 {
   // Prompt Order //
   // system_prompt
@@ -1620,17 +1654,17 @@ async function buildAIChatMessages(aiuser,chat_profile,content,role = "user",nam
   if (!chat_profile || !chat_profile.cardId_bot)
   {
     logTo("// [buildAIChatMessages] NOTE: chat_profile or chat_profile.cardId_bot is null. calling [getAIMessages] instead.")
-    return await getAIMessages(aiuser,chat_profile,content,role,name);
+    return await getAIMessages(aiuser,chat_profile,content,role,user_name);
   }
   logTo("// [buildAIChatMessages] NOTE: chat_profile.cardId_bot exists. Processing card data.")
 
   const card_bot  = await getAICardById(chat_profile.cardId_bot);
   const card_user = await getAICardById(chat_profile.cardId_user);
 
-  if (!name) name = (card_user && card_user.data && card_user.data.name) || chat_profile.user;
-  if (!card_bot.data.name) card_bot.data.name = "T4D"
+  if (!user_name) user_name = chat_profile.user || (card_user && card_user.data && card_user.data.name) || aiuser.discordUser.globalName;
+  if (!bot_name)  bot_name  = chat_profile.char || (card_bot  && card_bot.data  && card_bot.data.name)  || "T4D";
 
-  if (!card_bot.data.system_prompt)             card_bot.data.system_prompt = DEFAULT_CHAT_SYSTEM_PROMPT;
+  if (!card_bot.data.system_prompt)         card_bot.data.system_prompt = DEFAULT_CHAT_SYSTEM_PROMPT;
 
   //if (!card_bot.data.post_history_instructions) card_bot.data.post_history_instructions = app_config.DEFAULT_CHAT_JAILBREAK_2;
 
@@ -1644,17 +1678,17 @@ async function buildAIChatMessages(aiuser,chat_profile,content,role = "user",nam
   if (card_bot.data.mes_example)            messages = messages.concat(cCards.mes_example_to_openai(card_bot.data.mes_example));
   // start_new_chat
   messages.push( { role: "system", content: "[Start a new Chat]" } );
-  // first_mes
-  if (!chat_profile.memory_enabled && card_bot.data.first_mes) messages.push( { name: card_bot.data.name, role: "assistant", content: card_bot.data.first_mes } );
+  // first_mes -- removed because first_mes logic has changed.
+  // if (!chat_profile.memory_enabled && card_bot.data.first_mes) messages.push( { name: bot_name, role: "assistant", content: card_bot.data.first_mes } );
   // Detokenize messages
-  cCards.detokenize_object( messages, {"{{user}}": name, "{{char}}": card_bot.data.name} )
+  cCards.detokenize_object( messages, {"{{user}}": user_name, "{{char}}": bot_name} )
   // Memory
   if (chat_profile.memory_enabled && chat_profile.messages.length > 0) messages = messages.concat(chat_profile.messages);
   // user_message
-  if (content)                              messages.push(     { name: name, role: role, content: content } );
-  if (content)                              new_messages.push( { name: name, role: role, content: content } );
+  if (content)                              messages.push(     { name: user_name, role: role, content: content } );
+  if (content)                              new_messages.push( { name: user_name, role: role, content: content } );
   // post_history_instructions
-  if (card_bot.data.post_history_instructions) messages.push( { role: "system", content: cCards.detokenize_object( card_bot.data.post_history_instructions, {"{{user}}": name, "{{char}}": card_bot.data.name} ) } );
+  if (card_bot.data.post_history_instructions) messages.push( { role: "system", content: cCards.detokenize_object( card_bot.data.post_history_instructions, {"{{user}}": user_name, "{{char}}": bot_name} ) } );
 
   const messages_byte_count = cCards.get_byte_count(messages,["content"]);
   logTo("// [buildAIChatMessages] - messages_byte_count: " + messages_byte_count + " tokens: " + parseInt(messages_byte_count/3.6) );
@@ -1917,7 +1951,8 @@ async function handle_ChatMessage(aiuser,message,content)
   const card_user    = await getAICardById(chat_profile.cardId_user);
   const card_bot     = await getAICardById(chat_profile.cardId_bot);
 
-  const user_name    = ( card_user && card_user.data && card_user.data.name ) || chat_profile.user;
+  const user_name    = chat_profile.user || ( card_user && card_user.data && card_user.data.name ) || aiuser.discordUser.globalName;
+  const bot_name     = chat_profile.char || ( card_bot && card_bot.data && card_bot.data.name ) || "assistant";
 
   let reactions  //  = ["❌","🔁"];
 
@@ -1928,6 +1963,8 @@ async function handle_ChatMessage(aiuser,message,content)
     return await respondMessage( message, await command_import_card(aiuser,message,"",[]), reactions );
   }
 
+  /*
+  // Replaced by command_chat_first_message_bot
   // Send first_mes - if card is enabled and memory is enabled and no messages have been sent yet.
   if (card_bot.data.name && card_bot.data.first_mes && chat_profile.memory_enabled && chat_profile.messages.length == 0)
   {
@@ -1941,6 +1978,7 @@ async function handle_ChatMessage(aiuser,message,content)
       return;
     }
   }
+  */
 
   // If content exists, handle with OpenAI request.
   if (content)
@@ -1988,7 +2026,7 @@ async function handle_ChatMessage(aiuser,message,content)
       gptResponse.choices[0].message.content = response;
     }
 
-    if (card_bot.data.name) gptResponse.choices[0].message.name = card_bot.data.name;
+    if (bot_name) gptResponse.choices[0].message.name = bot_name;
 
     msgobj.new_messages.push( new OpenAIMessage(gptResponse.choices[0].message) );
 
@@ -2579,9 +2617,28 @@ async function command_character_swap(aiuser,message,args,argslist)
   if (!card) card = cards.find( card => card.cardName.toLowerCase().includes(args.toLowerCase()) );
   if (!card) return await loadTemplate("command_character_swap-not-found.txt",  { name: args, p: aiuser.command_prefix, user: aiuser.discordUser.globalName});
   chat_profile.cardId_bot = card.cardId;
-  await updateObjectInMongoDB( MONGO_URI, "chat_profiles", {"chatId": chat_profile.chatId}, {$set: { cardId_bot: chat_profile.cardId_bot } } );
-  await updateObjectInMongoDB( MONGO_URI, "users",         {"aiId":   aiuser.aiId},         {$set: {"last_cardId_bot": chat_profile.cardId_bot}} );
+  await setAIChatProfileCardBot(aiuser,chat_profile.chatId,chat_profile.cardId_bot,card.data.name || "assistant");
   return loadTemplate("command_character_swap-success.txt",  { cardName: card.cardName, message_count: chat_profile.messages.length });
+}
+
+/**
+ * 
+ * @param {AIUser} aiuser 
+ * @param {Message} message 
+ * @param {string} args 
+ * @param {Array} argslist 
+ * @returns 
+ */
+async function command_chat_say(aiuser,message,args,argslist)
+{
+  logTo("// [command_chat_say] Begin")
+  const chat_profile = await getAIChatProfile(aiuser);
+  const card_bot     = await getAICardById(chat_profile.cardId_bot);
+  if (args.length == 0) return loadTemplate("command-chat-say-help.txt",{p: aiuser.command_prefix});
+  const openai_message = new OpenAIMessage({name: card_bot.data.name || "assistant", role: "assistant", content: args});
+  const new_message = await message.channel.send(args);
+  if (chat_profile.memory_enabled == true) await pushAIChatMessages(aiuser,[openai_message],[[new_message.id]]);
+  return true;
 }
 
 
@@ -2644,6 +2701,51 @@ async function command_regenerate(aiuser,message,args,argslist)
   return true;
 }
 
+
+async function command_chat_first_message_bot(aiuser,message,args,argslist)
+{
+  const chat_profile = await getAIChatProfile(aiuser);
+  const card_bot     = await getAICardById(chat_profile.cardId_bot);
+  const card_user    = await getAICardById(chat_profile.cardId_user);
+  const user_name    = chat_profile.user || card_user.data.name || aiuser.discordUser.globalName || "user"
+  const bot_name     = chat_profile.char || card_bot.data.name  || "assistant"
+
+  // Send first_mes - if card is enabled and memory is enabled and no messages have been sent yet.
+  if (bot_name && card_bot.data.first_mes)
+  {
+    const first_mes = splitResponse(cCards.detokenize_object( card_bot.data.first_mes, {"{{user}}": user_name, "{{char}}": bot_name} ), 2000)[0];
+    const r = await message.channel.send(first_mes);
+    if (chat_profile.memory_enabled && r && r.id) await pushAIChatMessages(aiuser,[{name: bot_name, role: 'assistant', content: first_mes}],[[r.id]]); // Save to AI user messages history
+  }
+  else
+  {
+    await respondMessage(message, "No first message found for bots card.");
+  }
+  return true;
+}
+
+
+async function command_chat_first_message_user(aiuser,message,args,argslist)
+{
+  const chat_profile = await getAIChatProfile(aiuser);
+  const card_bot     = await getAICardById(chat_profile.cardId_bot);
+  const card_user    = await getAICardById(chat_profile.cardId_user);
+  const user_name    = chat_profile.user || card_user.data.name || aiuser.discordUser.globalName || "user"
+  const bot_name     = chat_profile.char || card_bot.data.name || "assistant"
+
+  // Send first_mes - if card is enabled and memory is enabled and no messages have been sent yet.
+  if (bot_name && card_user.data.first_mes)
+  {
+    const first_mes = splitResponse(cCards.detokenize_object( card_user.data.first_mes, {"{{user}}": user_name, "{{char}}": bot_name} ), 2000)[0];
+    const r = await message.channel.send(first_mes);
+    if (chat_profile.memory_enabled && r && r.id) await pushAIChatMessages(aiuser,[{name: user_name, role: 'user', content: first_mes}],[[r.id]]); // Save to AI user messages history
+  }
+  else
+  {
+    await respondMessage(message, "No first message found for users card.");
+  }
+  return true;
+}
 
 /**
  * Trims the last chat response to # of lines.
@@ -2769,7 +2871,7 @@ async function discord_create_memory_embed(aiuser,chat_profile,pageNumber)
       for (const p of chat_profiles)
       {
         const o = new StringSelectMenuOptionBuilder()
-          .setLabel(p.chatName)
+          .setLabel(`${p.chatName} - ${p.user} and ${p.char}`)
           .setDescription(`${p.messages.length} messages`)
           .setValue(p.chatId)
         if (p.chatId == chat_profile.chatId) o.setDefault(true);
@@ -2934,9 +3036,9 @@ async function discord_deploy_slash_commands(guildId)
     return `For Server: ${guildId}\nSuccessfully reloaded ${data.length} application commands.`
   } catch (error) {
     // And of course, make sure you catch and log any errors!
-    console.log(`For Server: ${guildId} - Failed when reloading ${data.length} application commands.`);
+    console.log(`For Server: ${guildId} - Failed when reloading application commands.`);
     console.error(error);
-    return `For Server: ${guildId}\nFailed when reloading ${data.length} application commands.`;
+    return `For Server: ${guildId}\nFailed when reloading application commands.`;
   }
 }
 
@@ -2961,30 +3063,33 @@ async function handleCommand(aiuser,message,content)
 
   const command_list =
   [
-    { name: "activate",              altname: "",         delete_ephemeral: false,  func: command_activate              },
-    { name: "commands",              altname: "",         delete_ephemeral: false,  func: command_commands              },
-    { name: "command-prefix",        altname: "cp",       delete_ephemeral: false,  func: command_command_prefix        },
-    { name: "help",                  altname: "",         delete_ephemeral: false,  func: command_help                  },
-    { name: "memory",                altname: "",         delete_ephemeral: false,  func: command_memory                },
-    { name: "test",                  altname: "",         delete_ephemeral: false,  func: command_test                  },
-    { name: "image",                 altname: "i",        delete_ephemeral: false,  func: command_image_v1              },
-    { name: "image-variation",       altname: "iv",       delete_ephemeral: false,  func: command_image_variation_v1    },
-    { name: "import",                altname: "",         delete_ephemeral: false,  func: command_import_card           },
-    { name: "swap",                  altname: "switch",   delete_ephemeral: false,  func: command_character_swap        },
-    { name: "select",                altname: "",         delete_ephemeral: false,  func: command_character_swap        },
-    { name: "list",                  altname: "",         delete_ephemeral: false,  func: command_character_list        },
-    { name: "regenerate",            altname: "",         delete_ephemeral: 2000,   func: command_regenerate            },
-    { name: "temperature",           altname: "",         delete_ephemeral: false,  func: command_temperature           },
-    { name: "trim",                  altname: "",         delete_ephemeral: 1,      func: command_trim                  },
-    { name: "delete",                altname: "",         delete_ephemeral: 5000,   func: command_delete                },
-    { name: "chat-export",           altname: "",         delete_ephemeral: false,  func: command_chat_export           },
-    { name: "chat-import",           altname: "",         delete_ephemeral: false,  func: command_chat_import           },
-    { name: "get-message",           altname: "gm",       delete_ephemeral: false,  func: command_get_message           },
-    { name: "deploy-slash-commands", altname: "",         delete_ephemeral: false,  func: command_deploy_slash_commands },
-    { name: "new-thread",            altname: "",         delete_ephemeral: false,  func: command_new_thread            },
-    { name: "deactivate",            altname: "",         delete_ephemeral: 5000,   func: command_activate              },
-    { name: "card",                  altname: "",         delete_ephemeral: false,  func: command_card                  },
-    { name: "my-card",               altname: "",         delete_ephemeral: false,  func: command_my_card               },
+    { name: "activate",                altname: "",         delete_ephemeral: false,  func: command_activate                },
+    { name: "commands",                altname: "",         delete_ephemeral: false,  func: command_commands                },
+    { name: "command-prefix",          altname: "cp",       delete_ephemeral: false,  func: command_command_prefix          },
+    { name: "help",                    altname: "",         delete_ephemeral: false,  func: command_help                    },
+    { name: "memory",                  altname: "",         delete_ephemeral: false,  func: command_memory                  },
+    { name: "test",                    altname: "",         delete_ephemeral: false,  func: command_test                    },
+    { name: "image",                   altname: "i",        delete_ephemeral: false,  func: command_image_v1                },
+    { name: "image-variation",         altname: "iv",       delete_ephemeral: false,  func: command_image_variation_v1      },
+    { name: "import",                  altname: "",         delete_ephemeral: false,  func: command_import_card             },
+    { name: "swap",                    altname: "switch",   delete_ephemeral: false,  func: command_character_swap          },
+    { name: "select",                  altname: "",         delete_ephemeral: false,  func: command_character_swap          },
+    { name: "list",                    altname: "",         delete_ephemeral: false,  func: command_character_list          },
+    { name: "regenerate",              altname: "",         delete_ephemeral: 2000,   func: command_regenerate              },
+    { name: "temperature",             altname: "",         delete_ephemeral: false,  func: command_temperature             },
+    { name: "trim",                    altname: "",         delete_ephemeral: 1,      func: command_trim                    },
+    { name: "delete",                  altname: "",         delete_ephemeral: 5000,   func: command_delete                  },
+    { name: "chat-export",             altname: "",         delete_ephemeral: false,  func: command_chat_export             },
+    { name: "chat-import",             altname: "",         delete_ephemeral: false,  func: command_chat_import             },
+    { name: "chat-say",                altname: "",         delete_ephemeral: 1,      func: command_chat_say                },
+    { name: "chat-first-message-bot",  altname: "",         delete_ephemeral: 1,      func: command_chat_first_message_bot  },
+    { name: "chat-first-message-user", altname: "",         delete_ephemeral: 1,      func: command_chat_first_message_user },
+    { name: "get-message",             altname: "gm",       delete_ephemeral: false,  func: command_get_message             },
+    { name: "deploy-slash-commands",   altname: "",         delete_ephemeral: false,  func: command_deploy_slash_commands   },
+    { name: "new-thread",              altname: "",         delete_ephemeral: false,  func: command_new_thread              },
+    { name: "deactivate",              altname: "",         delete_ephemeral: 5000,   func: command_activate                },
+    { name: "card",                    altname: "",         delete_ephemeral: false,  func: command_card                    },
+    { name: "my-card",                 altname: "",         delete_ephemeral: false,  func: command_my_card                 },
   ]
 
   let command
@@ -3176,9 +3281,8 @@ async function handle_ButtonInteraction(interaction)
       { chat_profile.cardId_user = cardId_user }
       else
       { chat_profile.cardId_user = "DEFAULT-USER-CARD" }
-      await updateObjectInMongoDB( MONGO_URI, "chat_profiles", {"chatId": chat_profile.chatId}, {$set: {"cardId_user": chat_profile.cardId_user}} );
-      await updateObjectInMongoDB( MONGO_URI, "users",         {"aiId":   aiuser.aiId},         {$set: {"last_cardId_user": chat_profile.cardId_user}} );
       const card         = await getAICardById(cardId_user);
+      await setAIChatProfileCardUser(aiuser,chat_profile.chatId,chat_profile.cardId_user,card.data.name || aiuser.discordUser.globalName);
       const new_message  = await discord_character_card_embed(aiuser,card);
       await interaction.update(new_message);
       return;
@@ -3190,9 +3294,8 @@ async function handle_ButtonInteraction(interaction)
       const aiuser       = await getAIUser(interaction.user,interaction.guildId,interaction.channelId);
       const chat_profile = await getAIChatProfile(aiuser,interaction.channelId);
       chat_profile.cardId_bot = cardId_bot || chat_profile.cardId_bot;
-      await updateObjectInMongoDB( MONGO_URI, "chat_profiles", {"chatId": chat_profile.chatId}, {$set: {"cardId_bot": chat_profile.cardId_bot}} );
-      await updateObjectInMongoDB( MONGO_URI, "users",         {"aiId":   aiuser.aiId},         {$set: {"last_cardId_bot": chat_profile.cardId_bot}} );
       const card         = await getAICardById(cardId_bot);
+      await setAIChatProfileCardBot(aiuser,chat_profile.chatId,chat_profile.cardId_bot,card.data.name || "assistant");
       const new_message  = await discord_character_card_embed(aiuser,card);
       await interaction.update(new_message);
       return;
@@ -3263,8 +3366,10 @@ async function handle_ButtonInteraction(interaction)
     {
       const aiuser           = await getAIUser(interaction.user,interaction.guildId,interaction.channelId);
       const cardId_bot       = args[2]
-      await updateObjectInMongoDB( MONGO_URI, "users", {"aiId": aiuser.aiId}, {$set: {"last_cardId_bot": cardId_bot}} );
-      const chat_profile     = await getAIChatProfile(aiuser,interaction.channelId,"//NEW-CHAT-PROFILE//");
+      let   chat_profile     = await getAIChatProfile(aiuser,interaction.channelId,"//NEW-CHAT-PROFILE//");
+      const card             = await getAICardById(cardId_bot);
+      await setAIChatProfileCardBot(aiuser,chat_profile.chatId,cardId_bot,card.data.name || "assistant");
+            chat_profile     = await getAIChatProfileByChatId(chat_profile.chatId);
       const new_message      = await discord_create_memory_embed(aiuser,chat_profile,-1);
       await interaction.update(new_message);
       return;
@@ -3273,6 +3378,7 @@ async function handle_ButtonInteraction(interaction)
   }
   catch (err) { logTo("// [handle_ButtonInteraction] FAILED"); logTo(err); }
 }
+
 
 
 //////////////////////////
