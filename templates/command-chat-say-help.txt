@@ -1,0 +1,1 @@
+> /chat-say <message>  -  Forces the bot to say <message> and records to memory if active.

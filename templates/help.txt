@@ -17,6 +17,7 @@
 > ## Chat Commands
 > - **${p}chat-export**  --  Export chat history for current character card (JSON format).
 > - **${p}chat-import**  --  Import chat history for current character card (JSON format).
+> - **${p}chat-say <message>**  --  Make the bot say <message>. Adds to memory if active.
 > - **${p}delete #**  --  Where # is the number of messages in memory to delete, starting with the most recent.
 > - **${p}memory < true | false | clear >**  --  Show/Activate/Clear Chat Memory (history) for selected character card.
 > - **${p}temperature #**  --  Get/Set the temperature for chat messages. Default: 0.5 , Range: 0.0 to 2.0.

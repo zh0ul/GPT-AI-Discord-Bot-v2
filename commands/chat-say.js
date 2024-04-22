@@ -14,12 +14,12 @@ async function execute(interaction)
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('delete')
-		.setDescription('Deletes a given number of messages from memory, starting with the most recent.')
+		.setName('chat-say')
+		.setDescription('Forces the bot to say something in chat. If memory is enabled, it also saves the message to memory.')
     .addStringOption(
       option =>
-        option.setName('num')
-        .setDescription('The number of messages to remove from memory, starting from the last message.')
+        option.setName('message')
+        .setDescription('The message the bot will say in chat.')
     ),
 	execute: execute
 };
