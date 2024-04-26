@@ -143,13 +143,17 @@ function encode (cardJson,inputImageFile,outputImageFile)
  * @param {*} replaceIn   - An array of OpenAI messages objects like [ { name: '{{CHAR}}', role: 'system', content: "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}." } ]
  * @param {*} regex_flags - The regex flags to use. Default is "gi".
  */
-function detokenize_object(replaceIn,replaceWith,regex_flags = "gi")
+function detokenize_object(replaceIn,replaceWith,regex_flags = "gi",replaceWindowsNewline = true)
 {
   if (typeof replaceIn === 'string')
   {
     for (const keyWith in replaceWith) {
       const re = new RegExp(keyWith, regex_flags);
       replaceIn = replaceIn.replace(re, replaceWith[keyWith]);
+      if (replaceWindowsNewline)
+      {
+        replaceIn = replaceIn.replace(/\r/g, "");
+      }
     }
     return replaceIn;
   }

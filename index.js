@@ -33,7 +33,7 @@ const SELECTED_CHAT_API          = app_config.SELECTED_CHAT_API;
 const SELECTED_IMAGE_API         = app_config.SELECTED_IMAGE_API;
 const MONGO_URI                  = app_config.MONGO_BASE_PATH + app_config.MONGO_DB_NAME;
 const DEFAULT_CHAT_MODEL         = app_config.DEFAULT_CHAT_MODEL;
-const DEFAULT_CHARACTER_CARD_URL = app_config.DEFAULT_CHARACTER_CARD_URL;
+//const DEFAULT_CHARACTER_CARD_URL = app_config.DEFAULT_CHARACTER_CARD_URL; // Removed because the URLs change frequently, and we now use DEFAULT_USER_CARD_FILE and DEFAULT_BOT_CARD_FILE
 const DEFAULT_MAX_TOKENS         = app_config.DEFAULT_MAX_TOKENS;
 const DEFAULT_MAX_NEW_TOKENS     = app_config.DEFAULT_MAX_NEW_TOKENS;
 const ALLOW_DIRECT_MESSAGES      = app_config.ALLOW_DIRECT_MESSAGES;
@@ -46,6 +46,12 @@ const DEFAULT_BOT_CARD_FILE      = app_config.DEFAULT_BOT_CARD_FILE;
 const DEBUG_MODE                 = app_config.DEBUG_MODE;
 const CHAT_RESPONSE_MAX_BYTES    = app_config.CHAT_RESPONSE_MAX_BYTES;
 const DEFAULT_MEMORY_DEPTH       = app_config.DEFAULT_MEMORY_DEPTH;
+//const TEXT_REPLACEMENTS        = app_config.TEXT_REPLACEMENTS; // This does not work due to back slashes required in regex, but JSON format not allowing it.
+const TEXT_REPLACEMENTS          = [
+  {"replaceThis": "</s> \\\[[a-zA-Z0-9 ]*]",  "replaceWith": "\n"},
+  {"replaceThis": "</s>[ ]*",  "replaceWith": "\n"}
+]
+
 
 //////////////////////
 // Character Cards
@@ -92,6 +98,8 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ButtonInteraction,
+  WebhookClient,
+  Webhook,
   // bold, italic, strikethrough, underscore, spoiler, quote, blockQuote
 } = require('discord.js');
 
@@ -102,6 +110,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildWebhooks,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.DirectMessageReactions,
@@ -264,6 +273,7 @@ class AIUser
     this.last_image_prompt_revised = c.last_image_prompt_revised || "";
     this.cardId_bot = c.cardId_bot || "DEFAULT-BOT-CARD";
     this.cardId_user = c.cardId_user || "DEFAULT-USER-CARD";
+    this.total_tokens = c.total_tokens || 0;
     this.channel_settings = c.channel_settings || {};
     this.chat_settings = c.chat_settings || {};
     this.chat_settings.model = c.chat_settings.model || "mixtral-8x7b-32768";
@@ -492,8 +502,26 @@ function sumElements(obj1, obj2) {
   return obj2;
 }
 
-function trimNewlines(str) {
+
+function trimNewlines(str)
+{
   return str.replace(/^[\r\n]+|[\r\n]+$/g, ''); // removes newlines from the beginning and end of a string.
+}
+
+
+function doTextReplacements(str)
+{
+  let new_str = str;
+  logTo("// [doTextReplacements] Begin")
+  if (TEXT_REPLACEMENTS)
+  {
+    for (const k in TEXT_REPLACEMENTS)
+    {
+      new_str = new_str.replace(new RegExp(TEXT_REPLACEMENTS[k].replaceThis,"g"),TEXT_REPLACEMENTS[k].replaceWith);
+    }
+  }
+  if (str != new_str) logTo("// [doTextReplacements] Text Replacements did change the string")
+  return new_str;
 }
 
 function stripComments(str) {
@@ -1349,6 +1377,12 @@ async function updateAIUserUsage(aiuser,usageType,modelType,usage)
 }
 
 
+async function updateAIChatProfileUsage(chat_profile,total_tokens)
+{
+  await updateObjectInMongoDB( MONGO_URI, "chat_profiles", {chatId: chat_profile.chatId}, {$set: {total_tokens: total_tokens}} );
+}
+
+
 function isAIChatChannelActive(aiuser,channelId)
 {
   return aiuser.active_channels.includes(channelId)
@@ -1677,7 +1711,7 @@ async function buildAIChatMessages(aiuser,chat_profile,content,role = "user",use
   // mes_example
   if (card_bot.data.mes_example)            messages = messages.concat(cCards.mes_example_to_openai(card_bot.data.mes_example));
   // start_new_chat
-  messages.push( { role: "system", content: "[Start a new Chat]" } );
+  // messages.push( { role: "system", content: "[Start a new Chat]" } );
   // first_mes -- removed because first_mes logic has changed.
   // if (!chat_profile.memory_enabled && card_bot.data.first_mes) messages.push( { name: bot_name, role: "assistant", content: card_bot.data.first_mes } );
   // Detokenize messages
@@ -1963,23 +1997,6 @@ async function handle_ChatMessage(aiuser,message,content)
     return await respondMessage( message, await command_import_card(aiuser,message,"",[]), reactions );
   }
 
-  /*
-  // Replaced by command_chat_first_message_bot
-  // Send first_mes - if card is enabled and memory is enabled and no messages have been sent yet.
-  if (card_bot.data.name && card_bot.data.first_mes && chat_profile.memory_enabled && chat_profile.messages.length == 0)
-  {
-    logTo("// [handle_ChatMessage] User has a card and has not sent any messages yet.  Sending first_mes.")
-    if (card_bot.data.first_mes)
-    {
-      const first_mes = cCards.detokenize_object( card_bot.data.first_mes, {"{{user}}": user_name, "{{char}}": card_bot.data.name} );
-      // Send first_mes to user
-      const r = await respondMessage(message,first_mes,reactions);
-      if (r && r.messageIds && r.messageIds.length > 0) await pushAIChatMessages(aiuser,[{name: card_bot.data.name, role: 'assistant', content: first_mes}],[r.messageIds]); // Save to AI user messages history
-      return;
-    }
-  }
-  */
-
   // If content exists, handle with OpenAI request.
   if (content)
   {
@@ -2017,7 +2034,8 @@ async function handle_ChatMessage(aiuser,message,content)
       return;
     }
 
-    response = trimNewlines(gptResponse.choices[0].message.content);
+    response = doTextReplacements(gptResponse.choices[0].message.content);
+    response = trimNewlines(response);
 
     if (response.length > CHAT_RESPONSE_MAX_BYTES)
     {
@@ -2059,6 +2077,7 @@ async function handle_ChatMessage(aiuser,message,content)
     logTo("// [handle_ChatMessage] gptResponse.usage");
     logTo(gptResponse.usage);
     if (gptResponse && gptResponse.usage) await updateAIUserUsage(aiuser,"text",openai_request.model,gptResponse.usage); // Add usage to DB.
+    if (gptResponse && gptResponse.usage) await updateAIChatProfileUsage(chat_profile,gptResponse.usage.total_tokens);
     logTo("// [handle_ChatMessage] aiuser.usage");
     logTo(aiuser.usage);
   }
@@ -2117,6 +2136,8 @@ async function command_image_v1(aiuser,message,args,argslist)
 
 //const options = copyObject(template_openai_image_request);
   const options = new OpenAIImageRequest(aiuser.image_request);
+
+  options.size  = template_openai_image_request.size;
 
   if (!args && aiuser.last_image_prompt) args = aiuser.last_image_prompt;
 
@@ -2398,6 +2419,7 @@ async function DoChatCompletion(aiuser,chat_profile)
     logTo("// [DoChatCompletion] chat_response.usage");
     logTo(chat_response.usage);
     await updateAIUserUsage(aiuser,"text",chat_request.model,chat_response.usage);
+    await updateAIChatProfileUsage(chat_profile,chat_response.usage.total_tokens);
   }
 
   return chat_response;
@@ -2509,7 +2531,7 @@ async function command_import_card(aiuser,message,args,argslist)
 
   for (let url_input of argslist)
   {
-    if (url_input == "default") url_input = DEFAULT_CHARACTER_CARD_URL;
+    //if (url_input == "default") url_input = DEFAULT_CHARACTER_CARD_URL;
 
     if (!url_input) return await loadTemplate("command_import_card-error-1.txt",{p: aiuser.command_prefix, url: "default" });
 
@@ -2533,7 +2555,7 @@ async function command_import_card(aiuser,message,args,argslist)
     }
     catch (err)
     {
-      logTo('// [command_import_card] Error importing character card:' + args);
+      logTo('// [command_import_card] Error importing character card:' + url_input);
       logTo(err);
       return await loadTemplate("command_import_card-error-1.txt",{p: aiuser.command_prefix, url: "default"});
     };
@@ -2643,6 +2665,34 @@ async function command_chat_say(aiuser,message,args,argslist)
 
 
 /**
+ * 
+ * @param {AIUser} aiuser 
+ * @param {Message} message 
+ * @param {string} args 
+ * @param {Array} argslist 
+ * @returns 
+ */
+async function command_chat_replace(aiuser,message,args,argslist)
+{
+  logTo("// [command_chat_replace] Begin")
+  const chat_profile   = await getAIChatProfile(aiuser);
+  if (args.length == 0) return loadTemplate("command-chat-replace-help.txt",{p: aiuser.command_prefix});
+  if (chat_profile.messages.length == 0) return loadTemplate("command-chat-replace-error-1.txt",{p: aiuser.command_prefix});
+  const card_bot       = await getAICardById(chat_profile.cardId_bot);
+  const card_user      = await getAICardById(chat_profile.cardId_user);
+  const user_name      = chat_profile.user || card_user.data.name || aiuser.discordUser.globalName || "user"
+  const bot_name       = chat_profile.char || card_bot.data.name || "assistant"
+  const old_message    = chat_profile.messages[chat_profile.messages.length-1];
+  const old_messageIds = chat_profile.messageIds[chat_profile.messageIds.length-1];
+  const new_message    = new OpenAIMessage({name: old_message.name, role: old_message.role, content: args});
+  await popAIChatMessages(aiuser,1);
+  await pushAIChatMessages(aiuser,[new_message],[old_messageIds]);
+  await discord_edit_message( message.channelId, old_messageIds[0], {content: args} );
+  return true;
+}
+
+
+/**
  * Regenerates the last chat response.
  * 
  * @param {AIUser}  aiuser 
@@ -2679,6 +2729,9 @@ async function command_regenerate(aiuser,message,args,argslist)
   let new_message = chat_response.choices[0].message
 
   new_message.name = old_message.name;
+
+  new_message.content = doTextReplacements(new_message.content);
+  new_message.content = trimNewlines(new_message.content);
 
   if (new_message.content.length > CHAT_RESPONSE_MAX_BYTES)
   {
@@ -2947,6 +3000,52 @@ async function command_memory(aiuser,message,args,argslist)
 
 
 /**
+ * 
+ * @param {AIUser}        aiuser 
+ * @param {Message}       message
+ * @param {string}        args
+ * @param {Array<string>} argslist
+ * @returns
+ */
+async function command_webhook_test(aiuser,message,args,argslist)
+{
+  const new_webhook = await message.channel.createWebhook({name: "GLaDOS", avatar: "https://cdn.discordapp.com/attachments/1223360702127931412/1223361799915573278/GLaDOS.png?ex=662c0876&is=662ab6f6&hm=7f61d90549032a90002b60b364d294b24cefd8ce028fe61cbfe50b4a23d7a6bc&"})
+  console.log("// [command_webhook_test] new_webhook:")
+  console.log(new_webhook)
+  console.log(new_webhook.url)
+  console.log(new_webhook.token)
+  const webhookClient = new WebhookClient({id: new_webhook.id, token: new_webhook.token});
+  console.log("// [command_webhook_test] webhookClient:")
+  console.log(webhookClient)
+  const response = await webhookClient.send({
+    content: 'Webhook test',
+    username: 'some-username',
+    avatarURL: 'https://i.imgur.com/AfFp7pu.png',
+    embeds: [],
+  });
+  console.log("// [command_webhook_test] response:")
+  console.log(response)
+
+  // for (const wh of await message.channel.fetchWebhooks())
+  // {
+  //   console.log("// [command_webhook_test] wh:")
+  //   console.log(wh)
+  //   console.log(wh.token)
+  //   console.log(wh.send)
+    
+  //   // wh.send({
+  //   //     content: 'Webhook test',
+  //   //     username: 'some-username',
+  //   //     avatarURL: 'https://i.imgur.com/AfFp7pu.png',
+  //   //     embeds: [],
+  //   //   });
+  // }
+  return true;
+}
+
+
+
+/**
  * Deletes the last # of messages.
  * 
  * @param {AIUser}        aiuser 
@@ -3084,12 +3183,14 @@ async function handleCommand(aiuser,message,content)
     { name: "chat-say",                altname: "",         delete_ephemeral: 1,      func: command_chat_say                },
     { name: "chat-first-message-bot",  altname: "",         delete_ephemeral: 1,      func: command_chat_first_message_bot  },
     { name: "chat-first-message-user", altname: "",         delete_ephemeral: 1,      func: command_chat_first_message_user },
+    { name: "replace",                 altname: "",         delete_ephemeral: 1,      func: command_chat_replace            },
     { name: "get-message",             altname: "gm",       delete_ephemeral: false,  func: command_get_message             },
     { name: "deploy-slash-commands",   altname: "",         delete_ephemeral: false,  func: command_deploy_slash_commands   },
     { name: "new-thread",              altname: "",         delete_ephemeral: false,  func: command_new_thread              },
     { name: "deactivate",              altname: "",         delete_ephemeral: 5000,   func: command_activate                },
     { name: "card",                    altname: "",         delete_ephemeral: false,  func: command_card                    },
     { name: "my-card",                 altname: "",         delete_ephemeral: false,  func: command_my_card                 },
+    { name: "webhook-test",            altname: "",         delete_ephemeral: false,  func: command_webhook_test            },
   ]
 
   let command
