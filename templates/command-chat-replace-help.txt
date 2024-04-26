@@ -1,0 +1,3 @@
+> Replaces the last message in memory with the given message.
+> NOTE: Memory must be enabled for this command to work.
+> To enable Memory: `/memory true`
