@@ -27,7 +27,7 @@
   "SELECTED_CHAT_API":          "GROQ",
   "SELECTED_IMAGE_API":         "OPENAI",
   "MONGO_BASE_PATH":            "mongodb://0.0.0.0:27017/",
-  "MONGO_DB_NAME":              "ai-2024-04-01",
+  "MONGO_DB_NAME":              "ai-2024-04-26",
   "DEFAULT_CHAT_MODEL":         "mixtral-8x7b-32768",
   "OTHER_CHAT_MODEL":           "llama2-70b-4096",
   "DEBUG_MODE":                 false,
