@@ -111,7 +111,7 @@ function parse (cardUrl)
  * @param   {string} outputImageFile - The output PNG filename.
  * @returns {boolean}                - true if the character card was successfully encoded, false otherwise.
  */
-function encode (cardJson,inputImageFile,outputImageFile)
+function encode(cardJson,inputImageFile,outputImageFile)
 {
   try {
     let jsonText

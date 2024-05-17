@@ -273,7 +273,6 @@ class AIUser
     this.last_image_prompt_revised = c.last_image_prompt_revised || "";
     this.cardId_bot = c.cardId_bot || "DEFAULT-BOT-CARD";
     this.cardId_user = c.cardId_user || "DEFAULT-USER-CARD";
-    this.total_tokens = c.total_tokens || 0;
     this.channel_settings = c.channel_settings || {};
     this.chat_settings = c.chat_settings || {};
     this.chat_settings.model = c.chat_settings.model || "mixtral-8x7b-32768";
@@ -329,6 +328,7 @@ class AIChatProfile
     this.chatName       = c.chatName       || "default";
     this.memory_enabled = c.memory_enabled || false;
     this.memory_depth   = c.hasOwnProperty("memory_depth") ? c.memory_depth : DEFAULT_MEMORY_DEPTH;
+    this.total_tokens   = c.total_tokens   || 0;
     this.user           = c.user           || "";
     this.char           = c.char           || "";
     this.persona        = c.persona        || "";
@@ -1717,7 +1717,16 @@ async function buildAIChatMessages(aiuser,chat_profile,content,role = "user",use
   // Detokenize messages
   cCards.detokenize_object( messages, {"{{user}}": user_name, "{{char}}": bot_name} )
   // Memory
-  if (chat_profile.memory_enabled && chat_profile.messages.length > 0) messages = messages.concat(chat_profile.messages);
+  //if (chat_profile.memory_enabled && chat_profile.messages.length > 0) messages = messages.concat(chat_profile.messages);
+  if (chat_profile.memory_enabled && chat_profile.messages.length > 0)
+  {
+    const min_i = Math.max(0,chat_profile.messages.length-DEFAULT_MEMORY_DEPTH-1);
+    for (let i = min_i; i < chat_profile.messages.length; i++)
+    {
+      messages.push(chat_profile.messages[i]);
+    }
+  }
+
   // user_message
   if (content)                              messages.push(     { name: user_name, role: role, content: content } );
   if (content)                              new_messages.push( { name: user_name, role: role, content: content } );
@@ -1823,8 +1832,7 @@ async function respondMessage( message, response, reactions )
   {
     try
     {
-      logTo("// [respondMessage]: message.channel.send - object");
-      //const result = await message.channel.send(response);
+      logTo("// [respondMessage]: Send response for: object");
       let result
       if (message.type == 2) {
         response.ephemeral = true;
@@ -1834,7 +1842,7 @@ async function respondMessage( message, response, reactions )
       {
         result = await message.channel.send(response);
       }
-      logTo("// [respondMessage]: message.channel.send - object - result");
+      logTo("// [respondMessage]: Receive result - object");
       console.log(result)
       messageIds.push(result.id);
       messages.push(result);
@@ -1854,7 +1862,7 @@ async function respondMessage( message, response, reactions )
     {
       try
       {
-        logTo("// [respondMessage]: message.channel.send - string");
+        logTo("// [respondMessage]: Respond with: string");
         let result
         //part = handleBackticks(part,2000);
         if (message.type == 2)
@@ -1865,7 +1873,7 @@ async function respondMessage( message, response, reactions )
         {
           result = await message.channel.send( { content: part.substring(0,2000) } );
         }
-        logTo("// [respondMessage]: message.channel.send - string - result");
+        logTo("// [respondMessage]: Receive result for: string");
         console.log(result)
         messageIds.push(result.id);
         messages.push(result);
@@ -3009,7 +3017,7 @@ async function command_memory(aiuser,message,args,argslist)
  */
 async function command_webhook_test(aiuser,message,args,argslist)
 {
-  const new_webhook = await message.channel.createWebhook({name: "GLaDOS", avatar: "https://cdn.discordapp.com/attachments/1223360702127931412/1223361799915573278/GLaDOS.png?ex=662c0876&is=662ab6f6&hm=7f61d90549032a90002b60b364d294b24cefd8ce028fe61cbfe50b4a23d7a6bc&"})
+  const new_webhook = await message.channel.createWebhook({name: "T4D", avatar: "https://cdn.discordapp.com/attachments/1223360702127931412/1223361799915573278/GLaDOS.png?ex=662c0876&is=662ab6f6&hm=7f61d90549032a90002b60b364d294b24cefd8ce028fe61cbfe50b4a23d7a6bc&"})
   console.log("// [command_webhook_test] new_webhook:")
   console.log(new_webhook)
   console.log(new_webhook.url)
@@ -3019,8 +3027,8 @@ async function command_webhook_test(aiuser,message,args,argslist)
   console.log(webhookClient)
   const response = await webhookClient.send({
     content: 'Webhook test',
-    username: 'some-username',
-    avatarURL: 'https://i.imgur.com/AfFp7pu.png',
+    username: 'Twisted Wishes',
+    avatarURL: 'https://cdn.discordapp.com/attachments/1223360702127931412/1223361798967787520/Twisted_Wishes1.png?ex=662ffcf5&is=662eab75&hm=68ec11335211f9b62fc3d320d5f93358e2df99e3d6876bbbe213a962a9145465&',
     embeds: [],
   });
   console.log("// [command_webhook_test] response:")
@@ -3032,7 +3040,6 @@ async function command_webhook_test(aiuser,message,args,argslist)
   //   console.log(wh)
   //   console.log(wh.token)
   //   console.log(wh.send)
-    
   //   // wh.send({
   //   //     content: 'Webhook test',
   //   //     username: 'some-username',
